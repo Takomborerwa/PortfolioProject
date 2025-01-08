@@ -1,0 +1,191 @@
+---
+title: "A1 Submission"
+author: "Takomborerwa Charles Mubaiwa(28080939)"
+date: '2024'
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+## Preliminary Steps
+
+```{r load-package, include=FALSE}
+library(tidyverse)
+library(scales)
+```
+
+```{r import-data}
+#Importing Data
+main_data <- read.csv("A1_data.csv", header = TRUE, stringsAsFactors = TRUE)
+```
+
+```{r data-check, include=FALSE}
+str(main_data)
+```
+
+```{r sample}
+#Sampling Data
+set.seed(9)
+test_index <- sample(1:1000, size = 900, replace = FALSE)
+test_data <- main_data[test_index,]
+```
+
+
+```{r samplesort, include=FALSE}
+### Preliminary check
+test_data_sort <- test_data %>% arrange(ID)
+View(test_data_sort)
+```
+# Assessment Questions
+
+## Question 1
+
+```{r central_tendancy}
+#Question 1.1
+print("Mean amount is: ")
+mean(test_data$AMOUNT)
+#Question 1.2
+print("Median amount is: ")
+median(test_data$AMOUNT)
+```
+
+## Question 2
+
+```{r loan_distribution}
+ggplot(test_data) + geom_point(mapping = aes(x = AGE, y = AMOUNT), position = "jitter") + scale_y_continuous(labels = comma) + labs(title = "Loan Amount vs Age I", y = "Loan Amount", x = "Age") + theme(plot.title = element_text(hjust = 0.5)) 
+```
+
+There is a concentration of small loans given to clients between the age of 20 to 40, in the same range the loans above 200,000R are more spread with a high variability of larger loan  and beyond age 40 loans are more evenly spread with a lower variability of larger loans.
+
+## Question 3
+
+```{r number_of_loans}
+ggplot(test_data, aes(x = HISTORY, fill =  HISTORY)) + geom_bar() + geom_text(stat = "count", aes(label = after_stat(count)), vjust = 1.5) + theme_classic() + labs(title = "Number of loans per Credit History Category", y = "NUmber of loans", x = "Credit History") + theme(plot.title = element_text(hjust = 0.5)) 
+```
+
+## Question 4
+
+```{r status-vs-loan}
+ggplot(test_data, mapping = aes(x = AGE, y = AMOUNT, colour = STATUS)) + geom_smooth(method = "loess", formula = 'y ~ x') + scale_y_continuous(labels = comma)  + labs(title = "Loan Amount vs Age II", y = "Loan Amount", x = "Age") + theme_minimal() + theme(plot.title = element_text(hjust = 0.5)) 
+```
+
+Based on the graph above customers of all ages who get loans below 100,000R pay back their loans and clients who take larger loans do not and this trend only decline
+
+## Question 5.1
+
+```{r duration-vs-amount}
+cor_value <- cor(test_data$DURATION, test_data$AMOUNT)
+print(paste("The correlation between loan duration and amount is:", round(cor_value, 3)))
+```
+## Question 5.2
+
+```{r duration-vs-amount_plot}
+ggplot(test_data) + geom_point(mapping = aes(x = DURATION, y = AMOUNT), position = "jitter") + scale_y_continuous(label = comma) + theme_bw() + labs(title = "Loan Duration vs Amount", x = "Loan Duration (months)", y = "Loan Amount") + theme(plot.title = element_text(hjust = 0.5))
+```
+
+There are two unusual observations, one indicating a loan for 720 months and the other for a loan of negative 5 months. Loan duration cannot be negative, and the maximum loan out appears to be 60 months. The original correlation is weak due to the presence of these outliers in the data and it improves after removing them.
+
+```{r cor_fresh}
+#Removing outliers
+new_test_data <- test_data[!(test_data$ID %in% c(431, 678)),]
+print(paste("The new correlation after removing outliers is:", round(cor(new_test_data$DURATION, new_test_data$AMOUNT), 3)))
+```
+
+## Question 6
+
+```{r comb_purpose}
+test_with <- test_data%>% mutate(COMB_PURPOSE=PURPOSE)
+test_with <- test_with%>%mutate(COMB_PURPOSE=if_else(COMB_PURPOSE == "Car - new", "Car", COMB_PURPOSE))%>%mutate(COMB_PURPOSE=if_else(COMB_PURPOSE == "Car - used", "Car", COMB_PURPOSE))%>%mutate(COMB_PURPOSE=if_else(COMB_PURPOSE == "furniture", "Household content", COMB_PURPOSE))%>%mutate(COMB_PURPOSE=if_else(COMB_PURPOSE == "TV", "Household content", COMB_PURPOSE))%>%mutate(COMB_PURPOSE=if_else(COMB_PURPOSE == "dom_appliance", "Household content", COMB_PURPOSE))
+purpose_data <- test_with%>%select(ID, AMOUNT, COMB_PURPOSE)
+purpose_data %>% group_by(COMB_PURPOSE) %>% summarize("Number of loans" = n(), "Average loan amount" = mean(AMOUNT))
+```
+
+There is a significant difference in loan amount based on purchase as average loans for large asset purchases such as a car and business are higher than that of relatively smaller purchases such as education or repairs.
+
+## Question 7
+
+```{r living-vs-status}
+ggplot(test_data, mapping = aes(x = LIVING, fill = STATUS)) + geom_bar(position = "dodge") + geom_text(stat = "count", aes(label = after_stat(count)), position = position_dodge(width = 1.0), vjust = 1.5) + labs(title = "Living Arrangement vs Living Status", y = "NUmber of clients", x = "Living Status") + theme_minimal() + theme(plot.title = element_text(hjust = 0.5)) 
+```
+
+## Question 8
+
+```{r other_accounts}
+# Question 8.1
+print("Missing values in Current variable")
+sum(test_data$CURRENT == "")
+print("Missing values in Savings variable")
+sum(test_data$SAVINGS == "")
+
+# Question 8.2
+MORE_LOANS <- ifelse(test_data$NUMPROD > 1, "Yes", "No")
+print("Observations where More loans is a yes")
+sum(MORE_LOANS == "Yes")
+```
+```{r other_accounts_plot}
+# Question 8.3
+ggplot(test_data, mapping = aes(x = SAVINGS, y = AMOUNT, colour = SAVINGS))+ geom_point(position = "jitter") + labs(title = "Loan Amount vs Customer Savings", y = "Loan Amount", x = "Customer Savings") + theme(plot.title = element_text(hjust = 0.5)) + scale_y_continuous(label = comma)
+ggplot(test_data, mapping = aes(x = CURRENT, y = AMOUNT, colour = CURRENT))+ geom_point(position = "jitter") + labs(title = "Loan Amount vs Customer Current Account", y = "Loan Amount", x = "Customer Current Account") + theme(plot.title = element_text(hjust = 0.5)) + scale_y_continuous(label = comma) 
+```
+
+The Amount vs Savings indicates that those with low savings took a high frequency of small loans, although with respect to the specific loan amount no relationship is evident as all savings classes took loans of varying amounts. Due to missing data the Amount vs Current graph shows no clear relationship between the amount borrowed and current balance as missing values are proportional to the low and overdrawn balances.
+
+## Question 9
+
+```{r youth_market}
+ggplot(test_data, mapping = aes(x = AGE, y = AMOUNT))+ geom_point(position = "jitter") + labs(title = "Loan Amount vs Age", x = "Age", y = "Loan Amount") + theme(plot.title = element_text(hjust = 0.5)) + scale_y_continuous(label = comma) + geom_vline(xintercept = 30, color = "blue") 
+
+# Youth below 100000R
+youth_below_100k <- (test_data%>%filter(AGE < 30 & AMOUNT < 100000)%>%summarise(youth = n())) / (test_data%>%filter(AGE < 30)%>%summarise(youth = n()))
+# Youth below 80000R
+youth_below_80k <- test_data%>%filter(AGE < 30 & AMOUNT < 80000)%>%summarise(youth = n()) / (test_data%>%filter(AGE < 30)%>%summarise(youth = n()))
+# Youth below 20000R
+youth_below_20k <- test_data%>%filter(AGE < 30 & AMOUNT < 50000)%>%summarise(youth = n()) / (test_data%>%filter(AGE < 30)%>%summarise(youth = n()))
+# Older below 100000R
+older_below_100k <- test_data%>%filter(AGE >= 30 & AMOUNT < 100000)%>%summarise(older = n()) / test_data %>% filter(AGE >= 30)%>%summarise(older = n())
+# Older below 80000R
+older_below_80k <-test_data%>%filter(AGE >= 30 & AMOUNT < 80000)%>%summarise(older = n()) / (test_data%>%filter(AGE > 30)%>%summarise(older = n()))
+# Older below 20000R
+older_below_20k <-test_data%>%filter(AGE >= 30 & AMOUNT < 50000)%>%summarise(older = n()) / (test_data%>%filter(AGE > 30)%>%summarise(older = n()))
+
+print(paste("Proportion of youth with loans under 100,000R:", round(youth_below_100k$youth, 3)))
+print(paste("Proportion of older clients with loans under 100,000R:", round(older_below_100k$older, 3)))
+
+print(paste("Proportion of youth with loans under 80,000R:", round(youth_below_80k$youth, 3)))
+print(paste("Proportion of older clients with loans under 80,000R:", round(older_below_80k$older, 3)))
+
+print(paste("Proportion of youth with loans under 20,000R:", round(youth_below_20k$youth, 3)))
+print(paste("Proportion of older clients with loans under 20,000R:", round(older_below_20k$older, 3)))
+```
+
+Depending on the classification of a small loan (For Example 100,000R)the bank's marketing manager's claim is correct, however from the data as loans get smaller their claim is wrong as the proportion of small loans relative to the total number of youth or older customers is approximately equal.
+
+## Question 10
+
+```{r cross-tabulation}
+test_data%>%group_by(GENDER, MAR_STAT)%>%tally()
+```
+
+All single customers have been grouped with no gender and all female customers have no classification when it comes to marital status. These indicate missing data or a "mix-up" of categories as suggested. This highlights that the data has inconsistencies and is not very useful for certain analysis.
+
+## Question 11
+
+```{r stability}
+# Number of people vs Reside
+ggplot(test_data, aes(x = RESIDE, fill = STATUS)) + geom_bar(position = "dodge") + labs(title = "Number of people vs Residential Status", y = "Number of people", x = "Residential Satus") + theme_bw() + theme(plot.title = element_text(hjust = 0.5)) + geom_text(stat = "count", aes(label = after_stat(count)),position = position_dodge(width = 1.0), vjust = 1.5)
+#Number of people vs Employ
+ggplot(test_data, aes(x = EMPLOY, fill = STATUS)) + geom_bar(position = "dodge") + labs(title = "Number of people vs Employment Status", y = "Number of people", x = "Current Employment Status") + theme_bw() + theme(plot.title = element_text(hjust = 0.5)) + geom_text(stat = "count", aes(label = after_stat(count)), position = position_dodge(width = 1.0), vjust = 1.5) + theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+After investigating the data set it is clear that the risk manager's assessment is true. From the plots above, it clearly shows out of the proportion of people who take out loans in the various RESIDE and EMPLOY categories, those who have been employed the longest and stayed at the same residence the longest, ("i.e are more stable") tend to pay their loan.
+
+## Question 12
+
+```{r brief_summary}
+brief_summary <- test_data%>%group_by(STATUS)%>%summarize("Mean Amount" = mean(AMOUNT, na.rm = TRUE), "Median Amount" = median(AMOUNT, na.rm = TRUE), "Mean Duration" = round(mean(DURATION, na.rm = TRUE), 2))
+
+print(brief_summary)
+```
+
+From the various analysis conducted through this assessment, it is clear that, the amount loaned, length of current residence as well living arrangement and length of current employment are the most important predictors of a customer's credit status. For more insight to these findings, I refer to the graphs from previous analysis namely "Loan Amount vs Age II" graph, "Living Arrangement vs Living Status" graph, "Number of people vs Residential Status" graph, "Number of people vs Employment Status". A brief summary from the table above stresses the point that the amount loaned is the most important predictor of a customer's credit status.
